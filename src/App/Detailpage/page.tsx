@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import Navbar from '../../components/Navbar';
 
 const DetailPage: React.FC = () => {
   const { postId } = useParams<{ postId: string }>();
@@ -25,185 +26,158 @@ const DetailPage: React.FC = () => {
 
   return (
     <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      backgroundColor: 'white',
+      minHeight: '100vh',
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 1000,
-      padding: '20px'
+      flexDirection: 'column'
     }}>
+      <Navbar showMenu={false} />
+      
       <div style={{
-        backgroundColor: 'white',
-        borderRadius: '16px',
-        maxWidth: '900px',
+        flex: 1,
+        padding: '40px 60px',
+        maxWidth: '1000px',
+        margin: '0 auto',
         width: '100%',
-        maxHeight: '90vh',
-        overflow: 'auto',
         position: 'relative'
       }}>
-        {/* Header */}
+        {/* Left side - Images */}
         <div style={{
-          padding: '20px 24px',
-          borderBottom: '1px solid #e5e5e5',
-          fontSize: '1.3rem',
-          fontWeight: 700,
-          display: 'flex',
-          justifyContent: 'center',
-          position: 'relative'
+          float: 'left',
+          width: '300px',
+          marginRight: '40px'
         }}>
-          รายะเอียด
-        </div>
-
-        {/* Content */}
-        <div style={{
-          display: 'flex',
-          padding: '24px'
-        }}>
-          {/* Left side - Images */}
           <div style={{
-            flex: '0 0 350px',
-            marginRight: '32px'
+            marginBottom: '12px'
           }}>
+            <img
+              src={images[currentImageIndex]}
+              alt={post.title}
+              style={{
+                width: '100%',
+                height: '300px',
+                objectFit: 'cover',
+                borderRadius: '12px'
+              }}
+            />
+          </div>
+          {images.length > 1 && (
             <div style={{
-              position: 'relative',
-              marginBottom: '12px'
+              display: 'flex',
+              gap: '8px',
+              flexWrap: 'wrap'
             }}>
-              <img
-                src={images[currentImageIndex]}
-                alt={post.title}
-                style={{
-                  width: '100%',
-                  height: '350px',
-                  objectFit: 'cover',
-                  borderRadius: '12px'
-                }}
-              />
+              {images.map((img: string, index: number) => (
+                <img
+                  key={index}
+                  src={img}
+                  alt={`Thumbnail ${index + 1}`}
+                  onClick={() => setCurrentImageIndex(index)}
+                  style={{
+                    width: '70px',
+                    height: '70px',
+                    objectFit: 'cover',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    border: currentImageIndex === index ? '2px solid #667eea' : '2px solid transparent',
+                    opacity: currentImageIndex === index ? 1 : 0.6
+                  }}
+                />
+              ))}
             </div>
-            {images.length > 1 && (
-              <div style={{
-                display: 'flex',
-                gap: '8px',
-                overflowX: 'auto'
-              }}>
-                {images.map((img: string, index: number) => (
-                  <img
-                    key={index}
-                    src={img}
-                    alt={`Thumbnail ${index + 1}`}
-                    onClick={() => setCurrentImageIndex(index)}
-                    style={{
-                      width: '80px',
-                      height: '80px',
-                      objectFit: 'cover',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      border: currentImageIndex === index ? '3px solid #667eea' : '3px solid transparent',
-                      opacity: currentImageIndex === index ? 1 : 0.6
-                    }}
-                  />
-                ))}
-              </div>
-            )}
+          )}
+        </div>
+
+        {/* Right side - Details */}
+        <div style={{
+          overflow: 'hidden'
+        }}>
+          <div style={{ marginBottom: '20px' }}>
+            <h2 style={{
+              fontSize: '1.4rem',
+              fontWeight: 700,
+              marginBottom: '8px',
+              color: '#000'
+            }}>
+              {post.title}
+            </h2>
+            <div style={{
+              fontSize: '0.8rem',
+              color: '#999',
+              display: 'flex',
+              gap: '8px'
+            }}>
+              <span>โพสต์เมื่อเวลา</span>
+              <span>•</span>
+              <span>สถานะ</span>
+            </div>
           </div>
 
-          {/* Right side - Details */}
-          <div style={{
-            flex: 1,
-            display: 'flex',
-            flexDirection: 'column'
-          }}>
-            <div style={{ marginBottom: '24px' }}>
-              <h2 style={{
-                fontSize: '1.5rem',
-                fontWeight: 700,
-                marginBottom: '8px',
-                color: '#000'
-              }}>
-                {post.title}
-              </h2>
-              <div style={{
-                fontSize: '0.85rem',
-                color: '#999',
-                display: 'flex',
-                gap: '8px'
-              }}>
-                <span>เมื่อผู้โพส</span>
-                <span>•</span>
-                <span>ทุกวันนี้</span>
-              </div>
-            </div>
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{
+              fontSize: '1rem',
+              fontWeight: 600,
+              marginBottom: '8px',
+              color: '#000'
+            }}>
+              รายเอียดของบริจาค
+            </h3>
+            <p style={{
+              fontSize: '0.9rem',
+              color: '#333',
+              lineHeight: '1.6',
+              whiteSpace: 'pre-wrap'
+            }}>
+              {post.description}
+            </p>
+          </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <h3 style={{
-                fontSize: '1.1rem',
-                fontWeight: 600,
-                marginBottom: '12px',
-                color: '#000'
-              }}>
-                รายเอียดของบริจาค
-              </h3>
-              <p style={{
-                fontSize: '0.95rem',
-                color: '#333',
-                lineHeight: '1.6',
-                whiteSpace: 'pre-wrap'
-              }}>
-                {post.description}
-              </p>
-            </div>
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{
+              fontSize: '1rem',
+              fontWeight: 600,
+              marginBottom: '8px',
+              color: '#000'
+            }}>
+              ชื่อผู้บริจาค
+            </h3>
+            <p style={{
+              fontSize: '0.9rem',
+              color: '#333'
+            }}>
+              {post.contact ? post.contact.split(',')[0] : 'ไม่ระบุ'}
+            </p>
+          </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <h3 style={{
-                fontSize: '1.1rem',
-                fontWeight: 600,
-                marginBottom: '12px',
-                color: '#000'
-              }}>
-                ชื่อผู้บริจาค
-              </h3>
-              <p style={{
-                fontSize: '0.95rem',
-                color: '#333'
-              }}>
-                {post.contact ? post.contact.split(',')[0] : 'ไม่ระบุ'}
-              </p>
-            </div>
-
-            <div style={{ marginBottom: '24px' }}>
-              <h3 style={{
-                fontSize: '1.1rem',
-                fontWeight: 600,
-                marginBottom: '12px',
-                color: '#000'
-              }}>
-                ช่องทางติดต่อ
-              </h3>
-              <p style={{
-                fontSize: '0.95rem',
-                color: '#333'
-              }}>
-                {post.contact || 'ไม่ระบุ'}
-              </p>
-            </div>
+          <div style={{ marginBottom: '20px' }}>
+            <h3 style={{
+              fontSize: '1rem',
+              fontWeight: 600,
+              marginBottom: '8px',
+              color: '#000'
+            }}>
+              ช่องทางติดต่อ
+            </h3>
+            <p style={{
+              fontSize: '0.9rem',
+              color: '#333'
+            }}>
+              {post.contact || 'ไม่ระบุ'}
+            </p>
           </div>
         </div>
 
-        {/* Close Button */}
+        {/* Close Button - Bottom Right */}
         <div style={{
-          padding: '16px 24px',
-          borderTop: '1px solid #e5e5e5',
+          clear: 'both',
           display: 'flex',
-          justifyContent: 'center'
+          justifyContent: 'flex-end',
+          marginTop: '40px'
         }}>
           <button
             onClick={() => navigate('/App/HomePage')}
             style={{
-              padding: '12px 48px',
+              padding: '10px 40px',
               borderRadius: '8px',
               border: 'none',
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
