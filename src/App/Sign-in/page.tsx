@@ -18,7 +18,7 @@ const SignIn: React.FC = () => {
       <img
         src={signinButtonImage}
         alt="Sign In Button"
-        style={{ position: 'absolute', right: '120px', top: '340px', width: '320px', height: '70px', cursor: 'pointer', zIndex: 3 }}
+        style={{ position: 'absolute', right: '32px', top: '586px', width: '400px', height: '86px', cursor: 'pointer', zIndex: 3 }}
         onClick={() => navigate('/App/HomePage')}
       />
     </div>
