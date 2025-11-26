@@ -1,30 +1,61 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
+import { postsAPI } from '../../services/api';
+import { useAuth } from '../../context/useAuth';
+
+interface Post {
+  _id: string;
+  title: string;
+  description: string;
+  images: string[];
+  contact: string;
+  status: string;
+}
 
 const EditPostPage: React.FC = () => {
   const navigate = useNavigate();
   const { postId } = useParams<{ postId: string }>();
+  const { isAuthenticated } = useAuth();
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [contact, setContact] = useState('');
-  const [currentPost, setCurrentPost] = useState<any>(null);
+  const [status, setStatus] = useState<'available' | 'reserved' | 'donated'>('available');
+  const [currentPost, setCurrentPost] = useState<Post | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    // Load post data
-    const posts = JSON.parse(localStorage.getItem('userPosts') || '[]');
-    const post = posts.find((p: any) => p.id.toString() === postId);
-    if (post) {
-      setCurrentPost(post);
-      setTitle(post.title);
-      setDescription(post.description);
-      setContact(post.contact);
-      setSelectedImages(post.images || [post.image]);
-    } else {
-      navigate('/App/MyPost');
-    }
-  }, [postId, navigate]);
+    const loadPost = async () => {
+      if (!isAuthenticated) {
+        navigate('/');
+        return;
+      }
+      
+      if (!postId) {
+        navigate('/App/MyPost');
+        return;
+      }
+      
+      try {
+        const post = await postsAPI.getPostById(postId);
+        setCurrentPost(post);
+        setTitle(post.title);
+        setDescription(post.description);
+        setContact(post.contact);
+        setStatus(post.status);
+        setSelectedImages(post.images || []);
+      } catch (error) {
+        console.error('Failed to load post:', error);
+        navigate('/App/MyPost');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadPost();
+  }, [postId, isAuthenticated, navigate]);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -47,7 +78,7 @@ const EditPostPage: React.FC = () => {
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!title.trim()) {
       alert('กรุณากรอกชื่อของบริจาค');
       return;
@@ -65,36 +96,52 @@ const EditPostPage: React.FC = () => {
       return;
     }
 
-    const posts = JSON.parse(localStorage.getItem('userPosts') || '[]');
-    const updatedPosts = posts.map((p: any) => {
-      if (p.id.toString() === postId) {
-        return {
-          ...p,
-          title,
-          description,
-          contact,
-          image: selectedImages[0],
-          images: selectedImages,
-          updatedAt: new Date().toISOString()
-        };
-      }
-      return p;
-    });
-
-    localStorage.setItem('userPosts', JSON.stringify(updatedPosts));
-    alert('แก้ไขโพสต์สำเร็จ!');
-    navigate('/App/MyPost');
-  };
-
-  const handleDelete = () => {
-    if (confirm('คุณต้องการลบโพสต์นี้ใช่หรือไม่?')) {
-      const posts = JSON.parse(localStorage.getItem('userPosts') || '[]');
-      const filteredPosts = posts.filter((p: any) => p.id.toString() !== postId);
-      localStorage.setItem('userPosts', JSON.stringify(filteredPosts));
-      alert('ลบโพสต์สำเร็จ!');
+    setIsSaving(true);
+    
+    try {
+      await postsAPI.updatePost(postId!, {
+        title,
+        description,
+        images: selectedImages,
+        contact,
+        status
+      });
+      alert('แก้ไขโพสต์สำเร็จ!');
       navigate('/App/MyPost');
+    } catch (error) {
+      console.error('Failed to update post:', error);
+      alert('เกิดข้อผิดพลาดในการแก้ไขโพสต์');
+    } finally {
+      setIsSaving(false);
     }
   };
+
+  const handleDelete = async () => {
+    if (confirm('คุณต้องการลบโพสต์นี้ใช่หรือไม่?')) {
+      try {
+        await postsAPI.deletePost(postId!);
+        alert('ลบโพสต์สำเร็จ!');
+        navigate('/App/MyPost');
+      } catch (error) {
+        console.error('Failed to delete post:', error);
+        alert('เกิดข้อผิดพลาดในการลบโพสต์');
+      }
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div style={{ 
+        backgroundColor: 'white', 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+      }}>
+        <p>กำลังโหลด...</p>
+      </div>
+    );
+  }
 
   if (!currentPost) {
     return <div>Loading...</div>;
@@ -265,6 +312,30 @@ const EditPostPage: React.FC = () => {
           />
         </div>
 
+        <div style={{ marginBottom: '24px', maxWidth: '500px', marginTop: '24px' }}>
+          <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, fontSize: '1rem', color: '#000' }}>
+            สถานะ
+          </label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as 'available' | 'reserved' | 'donated')}
+            style={{
+              width: '100%',
+              padding: '14px 16px',
+              borderRadius: '8px',
+              border: '1px solid #d0d0d0',
+              backgroundColor: '#f8f8f8',
+              fontSize: '0.9rem',
+              outline: 'none',
+              boxSizing: 'border-box'
+            }}
+          >
+            <option value="available">พร้อมบริจาค</option>
+            <option value="reserved">จองแล้ว</option>
+            <option value="donated">บริจาคแล้ว</option>
+          </select>
+        </div>
+
         <div style={{ display: 'flex', gap: '16px', justifyContent: 'space-between', marginTop: '40px' }}>
           <button
             onClick={handleDelete}
@@ -314,28 +385,31 @@ const EditPostPage: React.FC = () => {
             </button>
             <button
               onClick={handleUpdate}
+              disabled={isSaving}
               style={{
                 padding: '12px 32px',
                 borderRadius: '8px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: isSaving ? '#ccc' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 color: 'white',
                 fontSize: '1rem',
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: isSaving ? 'not-allowed' : 'pointer',
                 boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
                 transition: 'all 0.3s ease'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
+                if (!isSaving) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
+                }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
               }}
             >
-              แก้ไข
+              {isSaving ? 'กำลังบันทึก...' : 'แก้ไข'}
             </button>
           </div>
         </div>

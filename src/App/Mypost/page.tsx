@@ -2,24 +2,44 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import BgWrapper from '../../components/BgWrapper';
+import { postsAPI } from '../../services/api';
+import { useAuth } from '../../context/useAuth';
+
+interface Post {
+  _id: string;
+  title: string;
+  description: string;
+  images: string[];
+  contact: string;
+  status: string;
+  createdAt: string;
+}
 
 const MyPostPage: React.FC = () => {
   const navigate = useNavigate();
-  const [myPosts, setMyPosts] = useState<any[]>([]);
+  const { isAuthenticated } = useAuth();
+  const [myPosts, setMyPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load posts from localStorage
   useEffect(() => {
-    const loadPosts = () => {
-      const posts = JSON.parse(localStorage.getItem('userPosts') || '[]');
-      setMyPosts(posts);
+    const loadPosts = async () => {
+      if (!isAuthenticated) {
+        navigate('/');
+        return;
+      }
+      
+      try {
+        const posts = await postsAPI.getMyPosts();
+        setMyPosts(posts);
+      } catch (error) {
+        console.error('Failed to load my posts:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
     
     loadPosts();
-    
-    // Listen for storage changes (when new post is added)
-    window.addEventListener('storage', loadPosts);
-    return () => window.removeEventListener('storage', loadPosts);
-  }, []);
+  }, [isAuthenticated, navigate]);
 
   return (
     <BgWrapper>
@@ -65,7 +85,11 @@ const MyPostPage: React.FC = () => {
             </button>
           </div>
 
-          {myPosts.length === 0 ? (
+          {isLoading ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: '#666' }}>
+              <p style={{ fontSize: '1.2rem' }}>กำลังโหลด...</p>
+            </div>
+          ) : myPosts.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 20px', color: '#666' }}>
               <p style={{ fontSize: '1.2rem', marginBottom: '16px' }}>ยังไม่มีโพสต์</p>
               <p style={{ fontSize: '0.95rem' }}>เริ่มต้นแบ่งปันสิ่งของของคุณเพื่อช่วยเหลือผู้อื่น</p>
@@ -81,8 +105,8 @@ const MyPostPage: React.FC = () => {
             >
               {myPosts.map((post) => (
                 <div
-                  key={post.id}
-                  onClick={() => navigate(`/App/EditPostPage/${post.id}`)}
+                  key={post._id}
+                  onClick={() => navigate(`/App/EditPostPage/${post._id}`)}
                   style={{
                     background: '#f5f5f5',
                     borderRadius: '12px',
@@ -100,7 +124,7 @@ const MyPostPage: React.FC = () => {
                   }}
                 >
                   <img
-                    src={post.image}
+                    src={post.images?.[0]}
                     alt={post.title}
                     style={{
                       width: '100%',
@@ -113,6 +137,17 @@ const MyPostPage: React.FC = () => {
                       {post.title}
                     </h3>
                     <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>{post.description}</p>
+                    <span style={{ 
+                      display: 'inline-block',
+                      marginTop: '8px',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.75rem',
+                      background: post.status === 'available' ? '#e8f5e9' : post.status === 'reserved' ? '#fff3e0' : '#e3f2fd',
+                      color: post.status === 'available' ? '#2e7d32' : post.status === 'reserved' ? '#ef6c00' : '#1565c0'
+                    }}>
+                      {post.status === 'available' ? 'พร้อมบริจาค' : post.status === 'reserved' ? 'จองแล้ว' : 'บริจาคแล้ว'}
+                    </span>
                   </div>
                 </div>
               ))}

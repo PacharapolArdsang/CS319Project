@@ -1,28 +1,73 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
+import { postsAPI } from '../../services/api';
+
+interface Post {
+  _id: string;
+  title: string;
+  description: string;
+  images: string[];
+  contact: string;
+  status: string;
+  createdAt: string;
+  userId: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    email: string;
+    phone: string;
+  };
+}
 
 const DetailPage: React.FC = () => {
   const { postId } = useParams<{ postId: string }>();
   const navigate = useNavigate();
-  const [post, setPost] = useState<any>(null);
+  const [post, setPost] = useState<Post | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const posts = JSON.parse(localStorage.getItem('userPosts') || '[]');
-    const foundPost = posts.find((p: any) => p.id.toString() === postId);
-    if (foundPost) {
-      setPost(foundPost);
-    } else {
-      navigate('/App/HomePage');
-    }
+    const loadPost = async () => {
+      if (!postId) {
+        navigate('/App/HomePage');
+        return;
+      }
+      
+      try {
+        const data = await postsAPI.getPostById(postId);
+        setPost(data);
+      } catch (error) {
+        console.error('Failed to load post:', error);
+        navigate('/App/HomePage');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadPost();
   }, [postId, navigate]);
+
+  if (isLoading) {
+    return (
+      <div style={{ 
+        backgroundColor: 'white', 
+        minHeight: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+      }}>
+        <p>กำลังโหลด...</p>
+      </div>
+    );
+  }
 
   if (!post) {
     return <div>Loading...</div>;
   }
 
-  const images = post.images || [post.image];
+  const images = post.images || [];
 
   return (
     <div style={{
@@ -107,9 +152,13 @@ const DetailPage: React.FC = () => {
               display: 'flex',
               gap: '8px'
             }}>
-              <span>โพสต์เมื่อเวลา</span>
+              <span>โพสต์เมื่อ {new Date(post.createdAt).toLocaleDateString('th-TH')}</span>
               <span>•</span>
-              <span>สถานะ</span>
+              <span style={{
+                color: post.status === 'available' ? '#2e7d32' : post.status === 'reserved' ? '#ef6c00' : '#1565c0'
+              }}>
+                {post.status === 'available' ? 'พร้อมบริจาค' : post.status === 'reserved' ? 'จองแล้ว' : 'บริจาคแล้ว'}
+              </span>
             </div>
           </div>
 
@@ -145,7 +194,7 @@ const DetailPage: React.FC = () => {
               fontSize: '0.9rem',
               color: '#333'
             }}>
-              {post.contact ? post.contact.split(',')[0] : 'ไม่ระบุ'}
+              {post.userId ? `${post.userId.firstName} ${post.userId.lastName}` : 'ไม่ระบุ'}
             </p>
           </div>
 

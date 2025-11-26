@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
+import { postsAPI } from '../../services/api';
+import { useAuth } from '../../context/useAuth';
 
 const PostPage: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [contact, setContact] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -30,12 +34,13 @@ const PostPage: React.FC = () => {
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handlePost = () => {
-    console.log('handlePost called');
-    console.log('Title:', title);
-    console.log('Description:', description);
-    console.log('Images:', selectedImages.length);
-    console.log('Contact:', contact);
+  const handlePost = async () => {
+    // Check authentication
+    if (!isAuthenticated) {
+      alert('กรุณาเข้าสู่ระบบก่อนโพสต์');
+      navigate('/');
+      return;
+    }
 
     // Validate inputs
     if (!title.trim()) {
@@ -55,35 +60,24 @@ const PostPage: React.FC = () => {
       return;
     }
 
-    // Create new post object
-    const newPost = {
-      id: Date.now(),
-      title: title,
-      description: description,
-      image: selectedImages[0], // Use first image as main image
-      images: selectedImages,
-      contact: contact,
-      createdAt: new Date().toISOString()
-    };
+    setIsLoading(true);
 
-    console.log('New post:', newPost);
+    try {
+      await postsAPI.createPost({
+        title,
+        description,
+        images: selectedImages,
+        contact
+      });
 
-    // Get existing posts from localStorage
-    const existingPosts = JSON.parse(localStorage.getItem('userPosts') || '[]');
-    
-    // Add new post
-    existingPosts.push(newPost);
-    
-    // Save back to localStorage
-    localStorage.setItem('userPosts', JSON.stringify(existingPosts));
-
-    console.log('Posts saved to localStorage');
-
-    // Show success message
-    alert('โพสต์สำเร็จ!');
-
-    // Navigate to HomePage
-    navigate('/App/HomePage');
+      alert('โพสต์สำเร็จ!');
+      navigate('/App/HomePage');
+    } catch (error) {
+      console.error('Failed to create post:', error);
+      alert('เกิดข้อผิดพลาดในการสร้างโพสต์');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -279,28 +273,31 @@ const PostPage: React.FC = () => {
           </button>
           <button
             onClick={handlePost}
+            disabled={isLoading}
             style={{
               padding: '12px 32px',
               borderRadius: '8px',
               border: 'none',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: isLoading ? '#ccc' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: 'white',
               fontSize: '1rem',
               fontWeight: 600,
-              cursor: 'pointer',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
               boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
               transition: 'all 0.3s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
+              if (!isLoading) {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
+              }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
             }}
           >
-            โพสต์
+            {isLoading ? 'กำลังโพสต์...' : 'โพสต์'}
           </button>
         </div>
       </div>

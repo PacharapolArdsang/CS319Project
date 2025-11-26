@@ -1,12 +1,43 @@
 
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import bg from '../../assets/Bgcs319.png';
+import { useAuth } from '../../context/useAuth';
 
 const SignIn: React.FC = () => {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleLogin = async () => {
+    if (!username.trim()) {
+      setError('กรุณากรอกชื่อบัญชีผู้ใช้งาน');
+      return;
+    }
+    if (!password.trim()) {
+      setError('กรุณากรอกรหัสผ่าน');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      await login(username, password);
+      navigate('/App/HomePage');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { message?: string } } };
+      setError(error.response?.data?.message || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', overflow: 'hidden' }}>
       <Navbar showMenu={false} />
@@ -33,11 +64,25 @@ const SignIn: React.FC = () => {
         }}>
           <div style={{ width: '100%', maxWidth: '320px' }}>
             <h2 style={{ textAlign: 'center', margin: 0, fontSize: '1.7rem', fontWeight: 700, marginBottom: '28px', color: '#000' }}>เข้าสู่ระบบ</h2>
+            {error && (
+              <div style={{ 
+                background: '#fee', 
+                color: '#c00', 
+                padding: '12px', 
+                borderRadius: '8px', 
+                marginBottom: '16px',
+                fontSize: '0.9rem'
+              }}>
+                {error}
+              </div>
+            )}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '0.95rem', color: '#000' }}>บัญชีผู้ใช้งาน</label>
               <input 
                 type="text" 
-                placeholder="กรอกชื่อบัญชีผู้ใช้งาน" 
+                placeholder="กรอกชื่อบัญชีผู้ใช้งาน"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)} 
                 style={{ 
                   width: '100%', 
                   padding: '14px', 
@@ -54,7 +99,9 @@ const SignIn: React.FC = () => {
               <label style={{ fontWeight: 600, display: 'block', marginBottom: '8px', fontSize: '0.95rem', color: '#000' }}>รหัสผ่าน</label>
               <input 
                 type="password" 
-                placeholder="กรอกรหัสผ่าน" 
+                placeholder="กรอกรหัสผ่าน"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)} 
                 style={{ 
                   width: '100%', 
                   padding: '14px', 
@@ -94,9 +141,10 @@ const SignIn: React.FC = () => {
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
               }}
-              onClick={() => navigate('/App/HomePage')}
+              onClick={handleLogin}
+              disabled={isLoading}
             >
-              เข้าสู่ระบบ
+              {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
             </button>
             <div style={{ textAlign: 'center', fontSize: '0.9rem', color: '#000' }}>
               ยังไม่มีบัญชีผู้ใช้งาน? <a href="#" onClick={(e) => { e.preventDefault(); navigate('/App/Sign-up'); }} style={{ color: '#667eea', textDecoration: 'none', fontWeight: 600 }}>สมัครสมาชิก</a>

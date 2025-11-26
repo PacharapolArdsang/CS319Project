@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
 import BgWrapper from '../../components/BgWrapper';
+import { postsAPI } from '../../services/api';
 import riceImg from '../../assets/rice.png';
 import jacketImg from '../../assets/Jacket.png';
 import pantsImg from '../../assets/pants.png';
@@ -9,32 +10,62 @@ import tvImg from '../../assets/TV.png';
 import microwaveImg from '../../assets/Microwave.png';
 import shirtImg from '../../assets/Shirt.png';
 
+interface Post {
+  _id: string;
+  title: string;
+  description: string;
+  images: string[];
+  image?: string;
+  contact: string;
+  userId: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+  };
+  status: string;
+  createdAt: string;
+}
+
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
-  const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   const mockPosts = [
-    { id: 1, title: 'ข้าวสาร', description: 'รายละเอียดเพิ่มเติม...', image: riceImg },
-    { id: 2, title: 'เสื้อกันลม', description: 'รายละเอียดเพิ่มเติม...', image: jacketImg },
-    { id: 3, title: 'ยีนส์คงกระพัน', description: 'รายละเอียดเพิ่มเติม...', image: pantsImg },
-    { id: 4, title: 'โทรทัศน์ตู้แก้ว', description: 'รายละเอียดเพิ่มเติม...', image: tvImg },
-    { id: 5, title: 'ไมโครเวฟ ปี 1987', description: 'รายละเอียดเพิ่มเติม...', image: microwaveImg },
-    { id: 6, title: 'เสื้อยืด', description: 'รายละเอียดเพิ่มเติม...', image: shirtImg },
+    { id: 'mock1', title: 'ข้าวสาร', description: 'รายละเอียดเพิ่มเติม...', image: riceImg },
+    { id: 'mock2', title: 'เสื้อกันลม', description: 'รายละเอียดเพิ่มเติม...', image: jacketImg },
+    { id: 'mock3', title: 'ยีนส์คงกระพัน', description: 'รายละเอียดเพิ่มเติม...', image: pantsImg },
+    { id: 'mock4', title: 'โทรทัศน์ตู้แก้ว', description: 'รายละเอียดเพิ่มเติม...', image: tvImg },
+    { id: 'mock5', title: 'ไมโครเวฟ ปี 1987', description: 'รายละเอียดเพิ่มเติม...', image: microwaveImg },
+    { id: 'mock6', title: 'เสื้อยืด', description: 'รายละเอียดเพิ่มเติม...', image: shirtImg },
   ];
 
   useEffect(() => {
-    const loadPosts = () => {
-      const posts = JSON.parse(localStorage.getItem('userPosts') || '[]');
-      setUserPosts(posts);
+    const loadPosts = async () => {
+      try {
+        const data = await postsAPI.getAllPosts();
+        setPosts(data);
+      } catch (error) {
+        console.error('Failed to load posts:', error);
+      } finally {
+        setIsLoading(false);
+      }
     };
     
     loadPosts();
-    
-    window.addEventListener('storage', loadPosts);
-    return () => window.removeEventListener('storage', loadPosts);
   }, []);
 
-  const allPosts = [...mockPosts, ...userPosts];
+  const allPosts = [
+    ...mockPosts.map(p => ({ ...p, isMock: true })),
+    ...posts.map(p => ({ 
+      id: p._id, 
+      title: p.title, 
+      description: p.description, 
+      image: p.images?.[0] || p.image,
+      isMock: false 
+    }))
+  ];
 
   return (
     <BgWrapper>
@@ -88,14 +119,18 @@ const HomePage: React.FC = () => {
               marginTop: '32px',
             }}
           >
-            {allPosts.map((post, index) => {
-              const isUserPost = index >= mockPosts.length;
+            {isLoading ? (
+              <div style={{ gridColumn: 'span 3', textAlign: 'center', padding: '40px', color: '#666' }}>
+                กำลังโหลด...
+              </div>
+            ) : (
+            allPosts.map((post) => {
+              const isMock = 'isMock' in post && post.isMock;
               return (
                 <div
                   key={post.id}
                   onClick={() => {
-                    // Only navigate to detail page if it's a user post (not mock data)
-                    if (isUserPost) {
+                    if (!isMock) {
                       navigate(`/App/DetailPage/${post.id}`);
                     }
                   }}
@@ -103,11 +138,11 @@ const HomePage: React.FC = () => {
                     background: '#f5f5f5',
                     borderRadius: '12px',
                     overflow: 'hidden',
-                    cursor: isUserPost ? 'pointer' : 'default',
+                    cursor: isMock ? 'default' : 'pointer',
                     transition: 'all 0.3s ease',
                   }}
                   onMouseEnter={(e) => {
-                    if (isUserPost) {
+                    if (!isMock) {
                       e.currentTarget.style.transform = 'translateY(-4px)';
                       e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.12)';
                     }
@@ -134,7 +169,8 @@ const HomePage: React.FC = () => {
                 </div>
               </div>
             );
-            })}
+            })
+            )}
           </div>
         </div>
       </div>

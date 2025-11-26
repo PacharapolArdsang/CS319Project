@@ -1,17 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/Navbar';
+import { authAPI } from '../../services/api';
+import { useAuth } from '../../context/useAuth';
 
 const EditProfilePage: React.FC = () => {
   const navigate = useNavigate();
+  const { user, isAuthenticated, updateUser } = useAuth();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
 
-  const handleChangePassword = () => {
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/');
+      return;
+    }
+    
+    if (user) {
+      setFirstName(user.firstName);
+      setLastName(user.lastName);
+      setEmail(user.email);
+      setPhone(user.phone);
+    }
+  }, [user, isAuthenticated, navigate]);
+
+  const handleChangePassword = async () => {
     if (!currentPassword.trim()) {
       alert('กรุณากรอกรหัสผ่านปัจจุบัน');
       return;
@@ -25,13 +44,22 @@ const EditProfilePage: React.FC = () => {
       return;
     }
     
-    // In a real app, you would verify the current password and update to new password
-    alert('เปลี่ยนรหัสผ่านสำเร็จ!');
-    setCurrentPassword('');
-    setNewPassword('');
+    setIsChangingPassword(true);
+    
+    try {
+      await authAPI.changePassword({ currentPassword, newPassword });
+      alert('เปลี่ยนรหัสผ่านสำเร็จ!');
+      setCurrentPassword('');
+      setNewPassword('');
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      alert(err.response?.data?.message || 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน');
+    } finally {
+      setIsChangingPassword(false);
+    }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!firstName.trim()) {
       alert('กรุณากรอกชื่อจริง');
       return;
@@ -40,25 +68,42 @@ const EditProfilePage: React.FC = () => {
       alert('กรุณากรอกนามสกุล');
       return;
     }
-    if (!name.trim()) {
+    if (!email.trim()) {
       alert('กรุณากรอกอีเมล');
       return;
     }
-    if (!email.trim()) {
+    if (!phone.trim()) {
       alert('กรุณากรอกเบอร์โทรศัพท์');
       return;
     }
 
-    // Save profile data
-    const profileData = {
-      firstName,
-      lastName,
-      name,
-      email
-    };
-    localStorage.setItem('userProfile', JSON.stringify(profileData));
-    alert('บันทึกข้อมูลสำเร็จ!');
-    navigate('/App/HomePage');
+    setIsLoading(true);
+    
+    try {
+      const response = await authAPI.updateProfile({
+        firstName,
+        lastName,
+        email,
+        phone
+      });
+      
+      updateUser({
+        id: user!.id,
+        username: user!.username,
+        firstName: response.user.firstName,
+        lastName: response.user.lastName,
+        email: response.user.email,
+        phone: response.user.phone
+      });
+      
+      alert('บันทึกข้อมูลสำเร็จ!');
+      navigate('/App/HomePage');
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      alert(err.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึกข้อมูล');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleCancel = () => {
@@ -128,9 +173,9 @@ const EditProfilePage: React.FC = () => {
               อีเมล
             </label>
             <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="อีเมล"
               style={{
                 width: '100%',
@@ -152,8 +197,8 @@ const EditProfilePage: React.FC = () => {
             </label>
             <input
               type="tel"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
               placeholder="เบอร์โทรศัพท์"
               style={{
                 width: '100%',
@@ -218,30 +263,33 @@ const EditProfilePage: React.FC = () => {
             {/* เปลี่ยนรหัส Button */}
             <button
               onClick={handleChangePassword}
+              disabled={isChangingPassword}
               style={{
                 padding: '10px 24px',
                 borderRadius: '8px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: isChangingPassword ? '#ccc' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                 color: 'white',
                 fontSize: '0.95rem',
                 fontWeight: 600,
-                cursor: 'pointer',
+                cursor: isChangingPassword ? 'not-allowed' : 'pointer',
                 boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
                 transition: 'all 0.3s ease',
                 marginTop: '8px',
                 width: '180px'
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-2px)';
-                e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
+                if (!isChangingPassword) {
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
+                }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.transform = 'translateY(0)';
                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
               }}
             >
-              เปลี่ยนรหัสผ่าน
+              {isChangingPassword ? 'กำลังเปลี่ยน...' : 'เปลี่ยนรหัสผ่าน'}
             </button>
           </div>
         </div>
@@ -272,28 +320,31 @@ const EditProfilePage: React.FC = () => {
           </button>
           <button
             onClick={handleSave}
+            disabled={isLoading}
             style={{
               padding: '12px 32px',
               borderRadius: '8px',
               border: 'none',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: isLoading ? '#ccc' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: 'white',
               fontSize: '1rem',
               fontWeight: 600,
-              cursor: 'pointer',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
               boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
               transition: 'all 0.3s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
+              if (!isLoading) {
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(102, 126, 234, 0.4)';
+              }
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.3)';
             }}
           >
-            ยืนยัน
+            {isLoading ? 'กำลังบันทึก...' : 'ยืนยัน'}
           </button>
         </div>
       </div>
