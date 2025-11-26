@@ -12,13 +12,61 @@ const api = axios.create({
 });
 
 // Add token to requests if available
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    console.error('Request error:', error);
+    return Promise.reject(error);
   }
-  return config;
-});
+);
+
+// Handle response errors globally
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      // Server responded with error status
+      const { status, data } = error.response;
+
+      switch (status) {
+        case 401:
+          // Unauthorized - clear token and redirect to login
+          localStorage.removeItem('token');
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login';
+          }
+          break;
+        case 403:
+          console.error('Access forbidden:', data.message);
+          break;
+        case 404:
+          console.error('Resource not found:', data.message);
+          break;
+        case 500:
+          console.error('Server error:', data.message);
+          break;
+        default:
+          console.error(`Error ${status}:`, data.message);
+      }
+    } else if (error.request) {
+      // Request made but no response received
+      console.error('Network error: Unable to reach the server');
+      console.error('Please check if the backend server is running');
+      console.error('Expected server URL:', API_URL);
+    } else {
+      // Error in request setup
+      console.error('Request setup error:', error.message);
+    }
+
+    return Promise.reject(error);
+  }
+);
 
 // Auth API
 export const authAPI = {
