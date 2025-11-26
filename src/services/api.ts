@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:5000/api';
+// ใช้ IP ของเครื่อง server เพื่อให้เครื่องอื่นเข้าถึงได้
+const API_URL = 'http://192.168.40.101:5000/api';
 
 // Create axios instance
 const api = axios.create({
