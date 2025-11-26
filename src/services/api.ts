@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-// ใช้ IP ของเครื่อง server เพื่อให้เครื่องอื่นเข้าถึงได้
-const API_URL = 'http://192.168.40.101:5000/api';
+// Allow overriding the API URL via env; default to local backend
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 // Create axios instance
 const api = axios.create({
